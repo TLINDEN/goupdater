@@ -36,7 +36,7 @@ BOLD="\033[1;30m"
 config="$HOME/.goupdaterrc"
 command=$1
 tool=$2
-version=1.0.1
+version=1.0.3
 
 # array of: name:owner:project
 declare -A sources=()
@@ -126,7 +126,7 @@ latestfile() {
     uri=$1
     file=$(curl -s $opts -H "Accept: application/vnd.github.v3+json" $uri \
                | jq -r ".assets[] | .browser_download_url" \
-               | egrep "linux.amd64" | egrep -v "(md5|sha256sum)")
+               | egrep "linux.amd64" | egrep -v "(md5|sha256)")
 
     if test -z "$file"; then
         die "Could not determine download file from $uri!"
@@ -245,11 +245,11 @@ fi
             echo "Tool Installed-Release Latest-Release"
             ;;
         install)
-            if test -z "$tool"; then
+            if test -z "$2"; then
                 usage
             fi
                 
-            register $tool $3
+            register $2 $3
             ;;
         help)
             usage
@@ -275,7 +275,7 @@ fi
                 if test "$latest" != "$current"; then
                     color="$RED"
                 fi
-                echo -e "$tool ${color}$current${BLACK} $latest"
+                echo -e "$binary ${color}$current${BLACK} $latest"
                 ;;
             update)
                 if test "x$tool" = "x$binary" -o -z "$tool"; then
