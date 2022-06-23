@@ -1,0 +1,321 @@
+#!/bin/bash
+#
+# Simple shell script to install and update go binaries
+# installed from github release pages (exceptions allowed).
+#
+# To enable completion for the script:
+#   source <(goupdater completion bash)
+#
+# Usage:
+# Install a new tool:
+#   goupdater install hub https://github.com/github/hub
+#
+# Update a specific tool:
+#   goupdater update hub
+#
+# Update all tools (if there are updates available!)
+#   goupdater update
+#
+# List all installed releases:
+#   goupdater list
+#
+# 2022 (c) Thomas von Dein <tom@vondein.org>
+
+
+
+set -e
+
+api="https://api.github.com/repos"
+tmp="/tmp/goupdater.$$"
+GREEN="\033[0;32m"
+RED="\033[0;31m"
+MAGENTA="\033[0;35m"
+BLUEUNDER="\033[4;37m"
+BLACK="\033[0m"
+BOLD="\033[1;30m"
+config="$HOME/.goupdaterrc"
+command=$1
+tool=$2
+version=1.0.1
+
+# array of: name:owner:project
+declare -A sources=()
+
+usage() {
+    cat <<"EOF"
+This tool can be used to maintain manually installed binary GO
+tools installed via github releases, just like a package manager.
+
+Usage: goupdater <command> [param]
+
+Commands:
+  list                   lists all installed GO binaries.
+  install <uri> [<tool>] installs the specified tool using the github uri
+  update [<tool>]        updates all tools or only the one specified.
+  help                   shows this message.
+  version                shows the version of goupdater.
+
+Files:
+  ~/.goupdaterrc         contains the registry for all installed tools.
+
+To enable completion for the script, put this line into your ~/.bashrc:
+  source <(goupdater completion bash)
+EOF
+
+    exit 1
+}
+
+complete() {
+    shell=$1
+
+    case $shell in
+        bash)
+            cat <<"EOF"
+__goupdater_completions() {
+
+ config="$HOME/.goupdaterrc"
+ tools=""
+ if test -e $config; then
+   . $config
+   tools="${!sources[@]}"
+ fi
+
+ case $COMP_CWORD in
+   1)
+      COMPREPLY=($(compgen -W "install update list help version" "${COMP_WORDS[1]}"))
+      ;;
+   2)
+      case ${COMP_WORDS[1]} in
+        update)
+          COMPREPLY=($(compgen -W "$tools" "${COMP_WORDS[2]}"))
+          ;;
+        *)
+          COMPLREPLY=""
+          ;;
+      esac
+      ;;
+  esac
+}
+complete -F __goupdater_completions goupdater
+EOF
+            ;;
+        *)
+            die "Shell $shell unsupported!"
+            ;;
+    esac
+}
+
+urilatest() {
+    owner=$1
+    proj=$2
+    echo "$api/$owner/$proj/releases/latest"
+}
+
+latestrelease() {
+    uri=$1    
+    release=$(curl -s $opts -H "Accept: application/vnd.github.v3+json" $uri | jq -r .tag_name)
+
+    if test -z "$release"; then
+        die "Could not determine release from $uri!"
+    fi
+
+    echo $release
+}
+
+latestfile() {
+    uri=$1
+    file=$(curl -s $opts -H "Accept: application/vnd.github.v3+json" $uri \
+               | jq -r ".assets[] | .browser_download_url" \
+               | egrep "linux.amd64" | egrep -v "(md5|sha256sum)")
+
+    if test -z "$file"; then
+        die "Could not determine download file from $uri!"
+    fi
+
+    echo $file
+}
+
+currentrelease() {
+    tool=$1
+    if test -e "$HOME/bin/$tool"; then
+        ls -l $HOME/bin/$tool | cut -d'>' -f2 | sed "s/.*$tool-//"
+    else
+        echo "<not-installed>"
+    fi
+}
+
+download() {
+    uri=$1
+    release=$2
+
+    mkdir -p $tmp
+    wget -O $tmp/$tool-$release $uri
+
+    if ! test -s $tmp/$tool-$latest; then
+        die "Unable to download $archive!"
+    fi
+}
+
+update() {
+    tool=$1
+    release=$2
+
+    mv $tmp/$tool-$release $HOME/bin/
+    chmod 755 $HOME/bin/$tool-$release
+    ln -sf $HOME/bin/$tool-$release $HOME/bin/$tool
+}
+
+die() {
+    echo $* > /dev/stderr
+    exit 1
+}
+
+finish() {
+    rm -rf $tmp
+    exit
+}
+
+createconfig() {
+    cat <<"EOC" > $config
+# -*-sh-*-
+# config file for goupdater
+#
+# the variable sources is an associative array, the key
+# is the tool itself, the value is a semicolon separated
+# list containing the folliwing values:
+# - github project owner
+# - github project name
+# - optional: github uri
+#
+# You might also add github auth variables:
+# - user: holds the github username
+# - token: holds the token (generate it on your github account)
+
+user=""
+token=""
+
+declare -A sources=(
+    #[hub]="github:hub"
+)
+EOC
+}
+
+register() {
+    uri=$1
+    tool=$2
+    IFS="/" read -r -a params <<< "${uri}"
+    owner="${params[3]}"
+    proj="${params[4]}"
+    unset IFS
+
+    if test -z "$tool"; then
+        tool=$proj
+    fi
+
+    tmpfile="$tmp/rc"
+    mkdir -p $tmp
+    head -n -1 "$config" > $tmpfile
+
+    echo "    [$tool]=\"$owner;$proj\"" >> $tmpfile
+    echo ")" >> $tmpfile
+
+    mv $tmpfile $config
+
+    command=update
+}
+
+
+# main
+trap finish 1 2 13 15
+if test -e $config; then
+    . $config
+else
+    createconfig
+fi
+
+if test -n "$token" -a -n "$user"; then
+    opts="-u $user:$token"
+else
+    opts=""
+fi
+
+(
+    case $1 in
+        list)
+            echo "Tool Installed-Release Latest-Release"
+            ;;
+        install)
+            if test -z "$tool"; then
+                usage
+            fi
+                
+            register $tool $3
+            ;;
+        help)
+            usage
+            ;;
+        version)
+            echo "goupdater $version"
+            exit
+            ;;
+    esac
+
+    for binary in "${!sources[@]}"; do
+        IFS=";" read -r -a params <<< "${sources[$binary]}"
+        owner="${params[0]}"
+        proj="${params[1]}"
+        ownuri="${params[2]}"
+        uri=$(urilatest $owner $proj)
+
+        case $command in
+            list)
+                latest=$(latestrelease $uri)
+                current=$(currentrelease $binary)
+                color="$GREEN"
+                if test "$latest" != "$current"; then
+                    color="$RED"
+                fi
+                echo -e "$tool ${color}$current${BLACK} $latest"
+                ;;
+            update)
+                if test "x$tool" = "x$binary" -o -z "$tool"; then
+                    current=$(currentrelease $binary)
+                    latest=$(latestrelease $uri)
+                    if test "$current" != "$latest"; then
+                        if test -n "$ownuri"; then
+                            fileuri="${ownuri}${latest}"
+                        else
+                            fileuri=$(latestfile $uri)
+                        fi
+                        echo -e "${BOLD}Updating $binary from $current to $latest...${BLACK}"
+                        download $fileuri $latest
+                        update $binary $latest
+                        echo -e "${BOLD}done${BLACK}"
+                        finish
+                    else
+                        die "No need to update $binary: $current == $latest"
+                    fi
+                fi
+                ;;
+            completion)
+                complete $2
+                exit
+                ;;
+            *)
+                usage
+                ;;
+        esac
+    done
+) | (
+    case $command in
+        list)
+            sort | column -t
+            ;;
+        *)
+            cat
+            ;;
+    esac
+)
+
+rm -rf $tmp
+
