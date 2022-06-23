@@ -3,7 +3,7 @@
 [![made-with-bash](https://img.shields.io/badge/Made%20with-Bash-1f425f.svg)](https://www.gnu.org/software/bash/)
 [![GPLv3 license](https://img.shields.io/badge/License-GPLv3-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
 
-<img src="https://github.com/tlinden/goupdater/raw/master/rage.png" width="100">
+<img src="https://raw.githubusercontent.com/TLINDEN/goupdater/main/rage.png" width="100">
 
 install and update go binaries released on github
 
