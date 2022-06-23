@@ -16,11 +16,29 @@ Sample output:
 Tool      Installed-Release             Latest-Release
 fzf       0.30.0                        0.30.0
 helm      v3.9.0                        v3.9.0
+goupdater v1.0.1                        v1.0.4
 hub       v2.14.2                       v2.14.2
 kind      v0.14.0                       v0.14.0
 mc        RELEASE.2022-06-17T02-52-50Z  RELEASE.2022-06-17T02-52-50Z
 stern     v1.21.0                       v1.21.0
 yq        v4.25.2                       v4.25.2
+
+
+% goupdater update goupdater 
+Updating goupdater from v1.0.3 to v1.0.4...
+--2022-06-23 12:30:39--
+https://github.com/TLINDEN/goupdater/releases/download/v1.0.4/goupdater-linux-amd64-v1.0.4
+[..]
+HTTP request sent, awaiting response... 200 OK
+Length: 6848 (6.7K) [application/octet-stream]
+Saving to: '/tmp/goupdater.30852/goupdater-v1.0.4'
+
+/tmp/goupdater.30852/goupdater-v1.0.4  100%[=======================>]   6.69K  --.-KB/s    in 0s      
+
+2022-06-23 12:30:39 (34.8 MB/s) - '/tmp/goupdater.30852/goupdater-v1.0.4' saved [6848/6848]
+
+done
+
 ```
 
 
