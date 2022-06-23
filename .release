@@ -1,8 +1,9 @@
 #!/bin/sh
 release=$1
 archs="darwin-amd64 darwin-arm64 linux-amd64 linux-arm64 windows-amd64 freebsd-amd64"
+mkdir -p releases
+rm -f releases/*
 for arch in $archs; do
-    mkdir -p releases
     cp goupdater releases/goupdater-$arch-$release
     sha256sum releases/goupdater-$arch-$release | awk '{print $1}' > releases/goupdater-$arch-$release.sha256
 done
