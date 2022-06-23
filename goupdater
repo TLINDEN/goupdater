@@ -36,7 +36,7 @@ BOLD="\033[1;30m"
 config="$HOME/.goupdaterrc"
 command=$1
 tool=$2
-version=1.0.3
+version=1.0.4
 
 # array of: name:owner:project
 declare -A sources=()
@@ -124,9 +124,7 @@ latestrelease() {
 
 latestfile() {
     uri=$1
-    file=$(curl -s $opts -H "Accept: application/vnd.github.v3+json" $uri \
-               | jq -r ".assets[] | .browser_download_url" \
-               | egrep "linux.amd64" | egrep -v "(md5|sha256)")
+    file=$(curl -s $opts -H "Accept: application/vnd.github.v3+json" $uri | jq -r ".assets[] | .browser_download_url" | egrep "linux.amd64" | egrep -v "(md5|sha256)" | head -1)
 
     if test -z "$file"; then
         die "Could not determine download file from $uri!"
