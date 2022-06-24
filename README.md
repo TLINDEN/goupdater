@@ -49,7 +49,50 @@ Goupdater needs the following utilities to be installed:
 - [curl](https://curl.se/)
 - [jq](https://stedolan.github.io/jq/)
 
-Install them using your package manager on you OS.
+Install them using the package manager of you OS, e.g.:
+
+- on Debian/Ubuntu:
+  `sudo apt-get install jq curl`
+- on FreeBSD:
+  `sudo pkg install jq curl`
+- on MacOSX:
+  `brew install jq curl`
+- on VoidLinux:
+  `sudo xbps-install jq curl`
+- on ArchLinux:
+  `sudo pacman -S jq curl`
+- on RedHat:
+  `sudo yum install jq curl`
+- on OpenSUSE Linux:
+  `sudo zypper install jq curl`
+
+## Installation
+
+There are 2 ways to install `goupdater`:
+
+### Using a release
+
+Just download the [latest release](https://github.com/TLINDEN/goupdater/releases)
+and copy it to your personal bin dir, e.g.:
+
+```
+curl -o ~/bin/goupdater https://github.com/TLINDEN/goupdater/releases/download/v1.0.4/goupdater-linux-amd64-v1.0.4
+chmod 755 ~/bin/goupdater
+```
+
+### Install from source
+
+```
+git clone https://github.com/TLINDEN/goupdater.git
+cd goupdater
+make install
+```
+
+This will install the tool to `~/.gobins/` and symlink it to `~/bin/`.
+When you execute the script the first time, it will create a config file
+in `~/.goupdaterrc`.
+
+**Make sure to put `~/bin/` into your `$PATH` variable!**
 
 ## Usage
 ```

@@ -1,4 +1,3 @@
 - add local to functions to avoid variable collisions
 - add deinstall command
 - add rollback command
-- put versioned binaries into separate directory to avoid confusion with tab completion

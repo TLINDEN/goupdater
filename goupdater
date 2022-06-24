@@ -36,7 +36,7 @@ BOLD="\033[1;30m"
 config="$HOME/.goupdaterrc"
 command=$1
 tool=$2
-version=1.0.5
+version=v1.0.5
 
 # array of: name:owner:project
 declare -A sources=()
@@ -135,8 +135,8 @@ latestfile() {
 
 currentrelease() {
     tool=$1
-    if test -e "$HOME/bin/$tool"; then
-        ls -l $HOME/bin/$tool | cut -d'>' -f2 | sed "s/.*$tool-//"
+    if test -e "$linkdir/$tool"; then
+        ls -l $linkdir/$tool | cut -d'>' -f2 | sed "s/.*$tool-//"
     else
         echo "<not-installed>"
     fi
@@ -178,13 +178,13 @@ update() {
     tool=$1
     release=$2
 
-    mv $tmp/$tool-$release $HOME/bin/
-    chmod 755 $HOME/bin/$tool-$release
-    ln -sf $HOME/bin/$tool-$release $HOME/bin/$tool
+    mv $tmp/$tool-$release $bindir/
+    chmod 755 $bindir/$tool-$release
+    ln -sf $bindir/$tool-$release $linkdir/$tool
 }
 
 die() {
-    echo $* > /dev/stderr
+    echo Error: $* > /dev/stderr
     exit 1
 }
 
@@ -211,6 +211,8 @@ createconfig() {
 
 user=""
 token=""
+bindir="$HOME/.gobins"
+linkdir="$HOME/bin"
 
 declare -A sources=(
     #[hub]="github:hub"
@@ -279,6 +281,9 @@ esac
 # load and/or create
 if test -e $config; then
     . $config
+    if test -z "$bindir" -o -z "$linkdir"; then
+        die "linkdir or bindir not configured, add them to $config!"
+    fi
 else
     createconfig
 fi
