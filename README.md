@@ -170,7 +170,7 @@ Other shells are currently not supported.
 
 ## Getting help
 
-Although I'm happy to hear from udpxd users in private email, that's the best way for me to forget to do something.
+Although I'm happy to hear from goupdater users in private email, that's the best way for me to forget to do something.
 
 In order to report a bug, unexpected behavior, feature requests or to submit a patch, please open an [issue on github](https://github.com/TLINDEN/goupdater/issues). Thank you!
 
