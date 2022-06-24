@@ -36,7 +36,7 @@ BOLD="\033[1;30m"
 config="$HOME/.goupdaterrc"
 command=$1
 tool=$2
-version=1.0.4
+version=1.0.5
 
 # array of: name:owner:project
 declare -A sources=()
@@ -145,9 +145,29 @@ currentrelease() {
 download() {
     uri=$1
     release=$2
-
+    file=$(basename "$uri")
+    
     mkdir -p $tmp
-    wget -O $tmp/$tool-$release $uri
+
+    if echo "$file" | egrep -q "(tgz|tar.gz|zip)"; then
+        # archive, need to unpack
+        curl -Ls -o $tmp/$file $uri
+        if echo "$file" | egrep -q "(tgz|tar.gz)"; then
+            tar -xz -C $tmp -f $tmp/$file
+            binfile=$(find $tmp -type f | xargs file | grep ELF | cut -d: -f1)
+            if test -n "$binfile"; then
+                cp "$binfile" $tmp/$tool-$release
+            else
+                die "The release tarball didn't contain an executable binary!"
+            fi
+        else
+            # zip file
+            :
+        fi
+    else
+        # plain binary
+        curl -Ls -o $tmp/$tool-$release $uri
+    fi
 
     if ! test -s $tmp/$tool-$latest; then
         die "Unable to download $archive!"
@@ -225,6 +245,16 @@ register() {
 
 # main
 trap finish 1 2 13 15
+
+# check dependencies
+for f in curl jq; do
+    if ! type -f $f > /dev/null 2>&1; then
+        die "Required tool missing: $f"
+    fi
+done
+
+          
+
 if test -e $config; then
     . $config
 else
@@ -317,3 +347,4 @@ fi
 
 rm -rf $tmp
 
+# FIXME: use local

@@ -41,6 +41,15 @@ done
 
 ```
 
+## Dependencies
+
+Goupdater needs the following utilities to be installed:
+
+- [bash](https://www.gnu.org/software/bash/)
+- [curl](https://curl.se/)
+- [jq](https://stedolan.github.io/jq/)
+
+Install them using your package manager on you OS.
 
 ## Usage
 ```
