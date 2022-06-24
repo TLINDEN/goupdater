@@ -124,7 +124,7 @@ latestrelease() {
 
 latestfile() {
     uri=$1
-    file=$(curl -s $opts -H "Accept: application/vnd.github.v3+json" $uri | jq -r ".assets[] | .browser_download_url" | egrep "linux.amd64" | egrep -v "(md5|sha256)" | head -1)
+    file=$(curl -s $opts -H "Accept: application/vnd.github.v3+json" $uri | jq -r ".assets[] | .browser_download_url" | egrep "${os}.${arch}" | egrep -v "(md5|sha256)" | head -1)
 
     if test -z "$file"; then
         die "Could not determine download file from $uri!"
@@ -253,20 +253,46 @@ for f in curl jq; do
     fi
 done
 
-          
+# determine architecture
+os=$(echo $OSTYPE | cut -d'-' -f1 | tr '[A-Z]' '[a-z]')
 
+case $os in
+    cygwin*|mingw32*|msys*|mingw*)
+        os="windows"
+        ;;
+esac
+
+arch=""
+
+case $HOSTTYPE in
+    *i386*)
+        arch="386"
+        ;;
+    *x86_64*)
+        arch="amd64"
+        ;;
+    *)
+        die "HOSTTYPE $HOSTTYPE unsupported, please file an issue!"
+        ;;
+esac
+
+# load and/or create
 if test -e $config; then
     . $config
 else
     createconfig
 fi
 
+# run authenticated?
 if test -n "$token" -a -n "$user"; then
     opts="-u $user:$token"
 else
     opts=""
 fi
 
+# operation starts here, we surround everything with ()
+# to be able to feed column -t later so that we have
+# a nice list output
 (
     case $1 in
         list)
