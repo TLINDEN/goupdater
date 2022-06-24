@@ -145,6 +145,8 @@ Sample configuration file:
 ```
 user="*******"
 token="*********"
+bindir="$HOME/.gobins"
+linkdir="$HOME/bin"
 
 declare -A sources=(
     [stern]="stern;stern"
