@@ -36,7 +36,7 @@ BOLD="\033[1;30m"
 config="$HOME/.goupdaterrc"
 command=$1
 tool=$2
-version=v1.0.5
+version=v1.0.6
 
 # array of: name:owner:project
 declare -A sources=()
@@ -223,6 +223,7 @@ EOC
 register() {
     uri=$1
     tool=$2
+
     IFS="/" read -r -a params <<< "${uri}"
     owner="${params[3]}"
     proj="${params[4]}"
@@ -232,16 +233,19 @@ register() {
         tool=$proj
     fi
 
-    tmpfile="$tmp/rc"
-    mkdir -p $tmp
-    head -n -1 "$config" > $tmpfile
+    if test -z "${sources[$tool]}"; then
+        tmpfile="$tmp/rc"
+        mkdir -p $tmp
+        head -n -1 "$config" > $tmpfile
 
-    echo "    [$tool]=\"$owner;$proj\"" >> $tmpfile
-    echo ")" >> $tmpfile
+        echo "    [$tool]=\"$owner;$proj\"" >> $tmpfile
+        echo ")" >> $tmpfile
 
-    mv $tmpfile $config
+        mv $tmpfile $config
 
-    command=update
+        # also add new tool to list
+        sources[$tool]="$owner;$proj"
+    fi
 }
 
 
@@ -308,7 +312,8 @@ fi
                 usage
             fi
                 
-            register $2 $3
+            register $2
+            command=update
             ;;
         help)
             usage
