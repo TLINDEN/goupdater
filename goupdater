@@ -36,7 +36,7 @@ BOLD="\033[1;30m"
 config="$HOME/.goupdaterrc"
 command=$1
 tool=$2
-version=v1.0.6
+version=v1.0.7
 
 # array of: name:owner:project
 declare -A sources=()
@@ -124,7 +124,7 @@ latestrelease() {
 
 latestfile() {
     uri=$1
-    file=$(curl -s $opts -H "Accept: application/vnd.github.v3+json" $uri | jq -r ".assets[] | .browser_download_url" | egrep "${os}.${arch}" | egrep -v "(md5|sha256)" | head -1)
+    file=$(curl -s $opts -H "Accept: application/vnd.github.v3+json" $uri | jq -r ".assets[] | .browser_download_url" | egrep -i "${os}.${arch}" | egrep -v "(md5|sha256)" | head -1)
 
     if test -z "$file"; then
         die "Could not determine download file from $uri!"
@@ -275,7 +275,7 @@ case $HOSTTYPE in
         arch="386"
         ;;
     *x86_64*)
-        arch="amd64"
+        arch="(amd64|x86_64)"
         ;;
     *)
         die "HOSTTYPE $HOSTTYPE unsupported, please file an issue!"
