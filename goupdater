@@ -60,6 +60,9 @@ Files:
 
 To enable completion for the script, put this line into your ~/.bashrc:
   source <(goupdater completion bash)
+
+If the download cannot be determined automatically, put the latest release
+file in the current directory and run update|install.
 EOF
 
     exit 1
@@ -124,13 +127,22 @@ latestrelease() {
 
 latestfile() {
     uri=$1
+    tool=$2
+    latest=$3
+
     file=$(curl -s $opts -H "Accept: application/vnd.github.v3+json" $uri \
                | jq -r ".assets[] | .browser_download_url" \
                | egrep -i "${os}.${arch}" \
                | egrep -v "(asc|md5|sha256)" | head -1)
 
     if test -z "$file"; then
-        die "Could not determine download file from $uri!"
+        # helm-v3.9.2-linux-arm64.tar.gz
+        localfile=$(ls ${tool}-${latest}* | tail -1)
+        if test -n "$localfile"; then
+            echo $localfile
+        else
+            die "Could not determine download file from $uri!"
+        fi
     fi
 
     echo $file
@@ -154,7 +166,11 @@ download() {
 
     if echo "$file" | egrep -q "(tgz|tar.gz|zip)"; then
         # archive, need to unpack
-        curl -Ls -o $tmp/$file $uri
+        if test -e "$file"; then
+            cp "$file" $tmp/
+        else
+            curl -Ls -o $tmp/$file $uri
+        fi
         if echo "$file" | egrep -q "(tgz|tar.gz)"; then
             tar -xz -C $tmp -f $tmp/$file
             binfile=$(find $tmp -type f | xargs file | grep ELF | cut -d: -f1)
@@ -352,7 +368,7 @@ fi
                         if test -n "$ownuri"; then
                             fileuri="${ownuri}${latest}"
                         else
-                            fileuri=$(latestfile $uri)
+                            fileuri=$(latestfile $uri $tool $latest)
                         fi
                         echo -e "${BOLD}Updating $binary from $current to $latest...${BLACK}"
                         download $fileuri $latest
