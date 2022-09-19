@@ -36,7 +36,7 @@ BOLD="\033[1;30m"
 config="$HOME/.goupdaterrc"
 command=$1
 tool=$2
-version=v1.0.7
+version=v1.0.8
 
 # array of: name:owner:project
 declare -A sources=()
@@ -114,13 +114,46 @@ urilatest() {
     echo "$api/$owner/$proj/releases/latest"
 }
 
-latestrelease() {
-    uri=$1    
+addcache() {
+    local cache uri release
+    cache=$1
+    uri=$2
+    release=$3
+
+    if test -e "$cache"; then
+        echo "$uri $release" >> $cache
+    else
+        rm -f $HOME/.goupdater-cache*
+        echo "$uri $release" > $cache
+    fi
+}
+
+getlatestrelease() {
+    uri=$1
     release=$(curl -s $opts -H "Accept: application/vnd.github.v3+json" $uri | jq -r .tag_name)
 
     if test -z "$release"; then
         die "Could not determine release from $uri!"
     fi
+
+    echo $release
+}
+
+latestrelease() {
+    uri=$1
+    ts=$(date +%Y%m%d)
+    cache="$HOME/.goupdater-cache-$ts"
+    
+    if test -e "$cache"; then
+        release=$(grep $uri $cache | cut -d' ' -f2)
+        if test -z "$release"; then
+            release=$(getlatestrelease $uri)
+            addcache $cache $uri $release
+        fi
+    else
+        release=$(getlatestrelease $uri)
+        addcache $cache $uri $release
+    fi    
 
     echo $release
 }
@@ -132,16 +165,25 @@ latestfile() {
 
     file=$(curl -s $opts -H "Accept: application/vnd.github.v3+json" $uri \
                | jq -r ".assets[] | .browser_download_url" \
-               | egrep -i "${os}.${arch}" \
+               | egrep -i "${os}" | egrep -i "${arch}" \
                | egrep -v "(asc|md5|sha256)" | head -1)
 
     if test -z "$file"; then
         # helm-v3.9.2-linux-arm64.tar.gz
-        localfile=$(ls ${tool}-${latest}* | tail -1)
-        if test -n "$localfile"; then
-            echo $localfile
-        else
-            die "Could not determine download file from $uri!"
+        file=$(ls ${tool}-${latest}* | tail -1)
+        if test -z "$file"; then
+            echo "Could not determine download file from $uri!" >&2
+            echo -n "Download & extract the file yourself. Enter path to executable or c-c to abort: " >&2
+            read path
+            if test -z "$path"; then
+                die "Aborted"
+            fi
+
+            if test -s "$path"; then
+                file=$path
+            else
+                die "$path doesn't exist!"
+            fi
         fi
     fi
 
@@ -167,25 +209,34 @@ download() {
     if echo "$file" | egrep -q "(tgz|tar.gz|zip)"; then
         # archive, need to unpack
         if test -e "$file"; then
+            # the user already downloaded the archive and put it into pwd
             cp "$file" $tmp/
         else
             curl -Ls -o $tmp/$file $uri
         fi
+
+        # extract archives
         if echo "$file" | egrep -q "(tgz|tar.gz)"; then
             tar -xz -C $tmp -f $tmp/$file
-            binfile=$(find $tmp -type f | xargs file | grep ELF | cut -d: -f1)
-            if test -n "$binfile"; then
-                cp "$binfile" $tmp/$tool-$release
-            else
-                die "The release tarball didn't contain an executable binary!"
-            fi
         else
-            # zip file
-            :
+            unzip "$tmp/$file" -d $tmp
+        fi
+
+        # lookup actual binary
+        # FIXME: some archives may contain multiple binaries!
+        binfile=$(find $tmp -type f | xargs file | grep ELF | cut -d: -f1)
+        if test -n "$binfile"; then
+            cp "$binfile" $tmp/$tool-$release
+        else
+            die "The release tarball didn't contain an executable binary!"
         fi
     else
         # plain binary
-        curl -Ls -o $tmp/$tool-$release $uri
+        if test -s "$uri"; then
+            cp $uri $tmp/$tool-$release
+        else
+            curl -Ls -o $tmp/$tool-$release $uri
+        fi
     fi
 
     if ! test -s $tmp/$tool-$latest; then
@@ -370,10 +421,12 @@ fi
                         else
                             fileuri=$(latestfile $uri $tool $latest)
                         fi
+
                         echo -e "${BOLD}Updating $binary from $current to $latest...${BLACK}"
                         download $fileuri $latest
                         update $binary $latest
                         echo -e "${BOLD}done${BLACK}"
+
                         finish
                     else
                         die "No need to update $binary: $current == $latest"
