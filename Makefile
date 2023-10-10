@@ -30,3 +30,8 @@ release:
 		sha256sum releases/$(tool)-$$arch-$(version) | cut -d' ' -f1 > \
 			releases/$(tool)-$$arch-$(version).sha256; \
 	done
+	gh release create $(version) --generate-notes releases/*
+
+show-version:
+	@echo $(version)
+
