@@ -27,16 +27,14 @@ set -e
 
 api="https://api.github.com/repos"
 tmp="/tmp/goupdater.$$"
-GREEN="\033[0;32m"
-RED="\033[0;31m"
-MAGENTA="\033[0;35m"
-BLUEUNDER="\033[4;37m"
-BLACK="\033[0m"
-BOLD="\033[1;30m"
+RED=`tput setaf 1`
+GREEN=`tput setaf 2`
+BOLD=$(tput bold)
+BLACK=$(tput sgr0)
 config="$HOME/.goupdaterrc"
 command=$1
 tool=$2
-version=v1.0.8
+version=v1.0.9
 
 # array of: name:owner:project
 declare -A sources=()
@@ -179,11 +177,7 @@ latestfile() {
                 die "Aborted"
             fi
 
-            if test -s "$path"; then
-                file=$path
-            else
-                die "$path doesn't exist!"
-            fi
+            file=$path
         fi
     fi
 
@@ -192,8 +186,10 @@ latestfile() {
 
 currentrelease() {
     tool=$1
-    if test -e "$linkdir/$tool"; then
+    if test -L "$linkdir/$tool"; then
         ls -l $linkdir/$tool | cut -d'>' -f2 | sed "s/.*$tool-//"
+    elif test -x "$linkdir/$tool"; then
+        echo "<manuall-installed>"
     else
         echo "<not-installed>"
     fi
@@ -224,12 +220,13 @@ download() {
 
         # lookup actual binary
         # FIXME: some archives may contain multiple binaries!
-        binfile=$(find $tmp -type f | xargs file | grep ELF | cut -d: -f1)
-        if test -n "$binfile"; then
-            cp "$binfile" $tmp/$tool-$release
-        else
-            die "The release tarball didn't contain an executable binary!"
-        fi
+        for binfile in $(find $tmp -type f | xargs file | grep ELF | cut -d: -f1); do
+            if test -n "$binfile"; then
+                cp "$binfile" $tmp/$tool-$release
+            else
+                die "The release tarball didn't contain an executable binary!"
+            fi
+        done
     else
         # plain binary
         if test -s "$uri"; then
