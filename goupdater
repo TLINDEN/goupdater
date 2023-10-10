@@ -442,7 +442,7 @@ fi
 ) | (
     case $command in
         list)
-            sort | column -t
+            awk 'NR<2{print $0;next}{print | "sort "}' | column -t
             ;;
         *)
             cat
