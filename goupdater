@@ -34,7 +34,7 @@ BLACK=$(tput sgr0)
 config="$HOME/.goupdaterrc"
 command=$1
 tool=$2
-version=v1.0.9
+version=v1.0.10
 
 # array of: name:owner:project
 declare -A sources=()
